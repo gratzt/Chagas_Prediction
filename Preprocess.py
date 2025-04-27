@@ -185,7 +185,7 @@ class ECGPreprocess:
                 
         return filtered
     
-    def process_wfdb_files(self, file_paths, apply_resample=False, apply_highpass=False, 
+    def process_wfdb_files(self, record, apply_resample=False, apply_highpass=False, 
                           apply_lowpass=False, apply_wavelet=False, pad_to_length=None,
                           device='cpu'):
         """
@@ -193,8 +193,8 @@ class ECGPreprocess:
         
         Parameters:
         -----------
-        file_paths : list
-            List of paths to WFDB record files (without extension)
+        record : wfdb file read in
+            WFDB record file read in
         apply_resample : bool
             Whether to apply resampling
         apply_highpass : bool
@@ -211,174 +211,47 @@ class ECGPreprocess:
         torch.Tensor
             Tensor of processed ECG signals with shape (N, seq_length, 12)
         """
-        processed_signals = []
+
         
-        for file_path in file_paths:
-            try:
-                # Read the record
-                record = wfdb.rdrecord(file_path)
-                
-                # Get signal data and arrange to have leads in columns
-                signal_data = record.p_signal
-                original_fs = record.fs
-                
-                # Ensure we have 12 leads
-                if signal_data.shape[1] != 12:
-                    print(f"Warning: Record {file_path} does not have 12 leads. Skipping.")
-                    continue
-                
-                # Apply processing chain
-                if apply_resample and original_fs != self.sampling_rate:
-                    signal_data = self.resample_signal(signal_data, original_fs)
-                
-                if apply_highpass:
-                    signal_data = self.apply_highpass_filter(signal_data)
-                
-                if apply_lowpass:
-                    signal_data = self.apply_lowpass_filter(signal_data)
-                
-                if apply_wavelet:
-                    signal_data = self.apply_wavelet_filter(signal_data)
-                
-                processed_signals.append(signal_data)
-                
-            except Exception as e:
-                print(f"Error processing record {file_path}: {e}")
+        # Get signal data and arrange to have leads in columns
+        signal_data = record.p_signal
+        original_fs = record.fs
         
-        # Handle padding/truncation if requested
-        if pad_to_length is not None and processed_signals:
-            padded_signals = []
+        # Ensure we have 12 leads
+        if signal_data.shape[1] != 12:
+            print(f"Warning: Record does not have 12 leads. Skipping.")
             
-            for signal in processed_signals:
-                if signal.shape[0] > pad_to_length:
-                    # Truncate
-                    padded_signal = signal[:pad_to_length, :]
-                elif signal.shape[0] < pad_to_length:
-                    # Pad with zeros
-                    padding = np.zeros((pad_to_length - signal.shape[0], signal.shape[1]))
-                    padded_signal = np.vstack((signal, padding))
-                else:
-                    # Already correct length
-                    padded_signal = signal
+        
+        # Apply processing chain
+        if apply_resample and original_fs != self.sampling_rate:
+            signal_data = self.resample_signal(signal_data, original_fs)
+        
+        if apply_highpass:
+            signal_data = self.apply_highpass_filter(signal_data)
+        
+        if apply_lowpass:
+            signal_data = self.apply_lowpass_filter(signal_data)
+        
+        if apply_wavelet:
+            signal_data = self.apply_wavelet_filter(signal_data)
+        
                 
-                padded_signals.append(padded_signal)
+        # Handle padding/truncation if requested
+        if pad_to_length is not None:
+            if signal_data.shape[0] > pad_to_length:
+                # Truncate
+                signal_data = signal_data[:pad_to_length, :]
+            elif signal_data.shape[0] < pad_to_length:
+                # Pad with zeros
+                padding = np.zeros((pad_to_length - signal_data.shape[0], signal_data.shape[1]))
+                signal_data = np.vstack((signal_data, padding))
+            else:
+                # Already correct length
+                pass
             
             # Convert to tensor - shape will be N x seq_length x 12
-            result_tensor = torch.tensor(np.array(padded_signals), dtype=torch.float32)
-        else:
-            # Different length signals - just convert to tensor
-            # This creates a list of tensors with different first dimensions
-            result_tensor = [torch.tensor(signal, dtype=torch.float32) for signal in processed_signals]
+            result_tensor = torch.tensor(np.array(signal_data), dtype=torch.float32)
         
         result_tensor = result_tensor.to(device)
         return result_tensor
 
-'''
-# Example usage:
-from helper_code import *
-data_folder = r'..\springCS7643project_data\test'
-records = find_records(data_folder)
-records_path = [os.path.join(data_folder, records[i]) for i in range(len(records))]
-
-
-# Only Convert to tensors
-ecg_filter = ECGPreprocess(sampling_rate=400)
-processed_data = ecg_filter.process_wfdb_files(records_path, 
-                                               pad_to_length=5000)
-
-plt.figure(figsize=(12, 6))
-plt.plot(processed_data[0,:,:])
-plt.title('WFDB Signal')
-plt.xlabel('Samples')
-plt.ylabel('Amplitude')
-plt.show()
-
-
-# Convert to tensor and resample to correct sampling rate, in this case
-# the original sampling rate was 400, so our output should look identical 
-# to the non-resampled data
-ecg_filter = ECGPreprocess(sampling_rate=400)
-processed_data = ecg_filter.process_wfdb_files(records_path, 
-                                               pad_to_length=5000,
-                                               apply_resample=True)
-
-plt.figure(figsize=(12, 6))
-plt.plot(processed_data[0,:,:])
-plt.title('WFDB Signal')
-plt.xlabel('Samples')
-plt.ylabel('Amplitude')
-plt.show()
-
-# Convert to a higher sampling rate i.e. impute
-ecg_filter = ECGPreprocess(sampling_rate=300)
-processed_data = ecg_filter.process_wfdb_files(records_path, 
-                                               pad_to_length=5000,
-                                               apply_resample=True)
-
-plt.figure(figsize=(12, 6))
-plt.plot(processed_data[0,:,:])
-plt.title('WFDB Signal')
-plt.xlabel('Samples')
-plt.ylabel('Amplitude')
-plt.show()
-
-
-# convert to a lower sampling rate
-ecg_filter = ECGPreprocess(sampling_rate=500)
-processed_data = ecg_filter.process_wfdb_files(records_path, 
-                                               pad_to_length=5000,
-                                               apply_resample=True)
-
-plt.figure(figsize=(12, 6))
-plt.plot(processed_data[0,:,:])
-plt.title('WFDB Signal')
-plt.xlabel('Samples')
-plt.ylabel('Amplitude')
-plt.show()
-
-
-# Apply bandpass filters
-ecg_filter = ECGPreprocess(sampling_rate=400)
-processed_data = ecg_filter.process_wfdb_files(records_path, 
-                                               pad_to_length=5000,
-                                               apply_highpass=True,
-                                               apply_lowpass=True)
-
-plt.figure(figsize=(12, 6))
-plt.plot(processed_data[0,:,:])
-plt.title('WFDB Signal')
-plt.xlabel('Samples')
-plt.ylabel('Amplitude')
-plt.show()
-
-
-# Apply Extreme bandpass filters
-ecg_filter = ECGPreprocess(sampling_rate=400, highpass_freq=30,)
-processed_data = ecg_filter.process_wfdb_files(records_path, 
-                                               pad_to_length=5000,
-                                               apply_highpass=True,
-                                               apply_lowpass=True)
-
-plt.figure(figsize=(12, 6))
-plt.plot(processed_data[0,:,:])
-plt.title('WFDB Signal')
-plt.xlabel('Samples')
-plt.ylabel('Amplitude')
-plt.show()
-
-
-# Apply Wavelet filters
-ecg_filter = ECGPreprocess(sampling_rate=400)
-processed_data = ecg_filter.process_wfdb_files(records_path, 
-                                               pad_to_length=5000,
-                                               apply_wavelet=True)
-
-plt.figure(figsize=(12, 6))
-plt.plot(processed_data[0,:,:])
-plt.title('WFDB Signal')
-plt.xlabel('Samples')
-plt.ylabel('Amplitude')
-plt.show()
-
-'''
-#record = wfdb.rdrecord(r'C:\Users\trevo\OneDrive\Documents\Georgia Tech\Courses\CS7643\Project\springCS7643project_data\ExtraData\100030_back_crop')

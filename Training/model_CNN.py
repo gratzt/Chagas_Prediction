@@ -146,7 +146,7 @@ class ECGTransformer(nn.Module):
         Returns:
             logits: Tensor of shape [batch_size, 1]
         """
-        
+
         batch_size, seq_length, channels = ecg.size()
         
         # Transpose ECG to [batch_size, channels, seq_length] for CNN operations
