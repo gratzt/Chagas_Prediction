@@ -7,7 +7,7 @@ Created on Sun Mar 23 11:37:13 2025
 
 import numpy as np
 import os
-import pywt
+#import pywt
 from scipy import signal
 import wfdb
 import torch
@@ -137,7 +137,9 @@ class ECGPreprocess:
                 filtered[:, i] = signal.filtfilt(b, a, signal_data[:, i])
                 
         return filtered
-    
+    '''
+    Streamlit compatibility issues. Not used for this application anyways
+
     def apply_wavelet_filter(self, signal_data):
         """
         Apply wavelet-based denoising to the ECG signal.
@@ -184,10 +186,11 @@ class ECGPreprocess:
                 filtered[:, i] = lead_filtered
                 
         return filtered
-    
+    '''
+
     def process_wfdb_files(self, record, apply_resample=False, apply_highpass=False, 
-                          apply_lowpass=False, apply_wavelet=False, pad_to_length=None,
-                          device='cpu'):
+                          apply_lowpass=False, pad_to_length=None,
+                          device='cpu'): # apply_wavelet=False
         """
         Process a list of WFDB ECG recordings and apply selected filters.
         
@@ -232,8 +235,8 @@ class ECGPreprocess:
         if apply_lowpass:
             signal_data = self.apply_lowpass_filter(signal_data)
         
-        if apply_wavelet:
-            signal_data = self.apply_wavelet_filter(signal_data)
+        #if apply_wavelet:
+        #    signal_data = self.apply_wavelet_filter(signal_data)
         
                 
         # Handle padding/truncation if requested

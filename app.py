@@ -49,45 +49,50 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # Password protection
+
+REQUIRE_PASSWORD = False
+
+REQUIRE_PASSWORD = False  # Set to True to enable password gate
+
 def check_password():
-    """Returns `True` if the user had the correct password and agreed to disclaimer."""
+    """Handles password gating and disclaimer logic."""
+    disclaimer = """
+    **Disclaimer & Acknowledgment**
+    
+    This application is a demonstration tool developed solely for educational and portfolio purposes. It is intended to showcase the developer's technical skills in machine learning, deep learning, and software development. **It is not a medical device**, has **not been reviewed or approved by any medical authority**, and **must not be used for diagnosis, treatment, or any medical decision-making**.
+
+    By using this tool, you acknowledge and agree that:
+    * You understand that the application is not intended for clinical or diagnostic use.
+    * You will not interpret the output of this tool as medical advice or a substitute for professional healthcare.
+    * You assume full responsibility for any decisions or actions taken based on the output of the application.
+    * The developer of this application is not liable for any damages, losses, or harm resulting from its use.
+    """
+    
+    st.markdown("<h1 class='main-header'>Using electrocardiogram data with deep neural networks to predict a neglected tropical disease: Chagas Disease</h1>", unsafe_allow_html=True)
+    st.markdown(disclaimer)
+
+    if not REQUIRE_PASSWORD:
+        agree = st.checkbox("**I acknowledge and agree to the terms above.**")
+        if agree:
+            return True
+        else:
+            st.warning("Please acknowledge the disclaimer to continue.")
+            return False
+
+    # If password required
     def password_entered():
-        """Checks whether a password entered by the user is correct."""
         if st.session_state["password"] == "demo123":
             st.session_state["password_correct"] = True
-            del st.session_state["password"]  # don't store password
+            del st.session_state["password"]
         else:
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        # First run, show input for password.
-        st.markdown("<h1 class='main-header'>Using electrocardiogram data with deep neural networks to predict a neglected tropical disease: Chagas Disease</h1>", unsafe_allow_html=True)
-        
-        st.text_input(
-            "Please enter the password", 
-            type="password", 
-            key="password"
-        )
-        
-        disclaimer = """
-        **Disclaimer & Acknowledgment**
-        
-        This application is a demonstration tool developed solely for educational and portfolio purposes. It is intended to showcase the developer's technical skills in machine learning, deep learning, and software development. **It is not a medical device**, has **not been reviewed or approved by any medical authority**, and **must not be used for diagnosis, treatment, or any medical decision-making**.
-        
-        By using this tool, you acknowledge and agree that:
-        * You understand that the application is not intended for clinical or diagnostic use.
-        * You will not interpret the output of this tool as medical advice or a substitute for professional healthcare.
-        * You assume full responsibility for any decisions or actions taken based on the output of the application.
-        * The developer of this application is not liable for any damages, losses, or harm resulting from its use.
-        """
-        
-        st.markdown(disclaimer)
+        st.text_input("Please enter the password", type="password", key="password")
         agree = st.checkbox("**I acknowledge and agree to the terms above.**")
-        
-        # Add submit button
+
         if st.button("Submit"):
             password_entered()
-            
             if not st.session_state["password_correct"]:
                 st.error("😕 Password incorrect")
             elif not agree:
@@ -95,37 +100,14 @@ def check_password():
             else:
                 st.session_state["disclaimer_agreed"] = True
                 st.rerun()
-                
         return False
+
     elif not st.session_state.get("password_correct", False) or not st.session_state.get("disclaimer_agreed", False):
-        # Password not correct or disclaimer not agreed, show input + error.
-        st.markdown("<h1 class='main-header'>Using electrocardiogram data with deep neural networks to predict a neglected tropical disease: Chagas Disease</h1>", unsafe_allow_html=True)
-        
-        st.text_input(
-            "Please enter the password", 
-            type="password", 
-            key="password"
-        )
-        
-        disclaimer = """
-        **Disclaimer & Acknowledgment**
-        
-        This application is a demonstration tool developed solely for educational and portfolio purposes. It is intended to showcase the developer's technical skills in machine learning, deep learning, and software development. **It is not a medical device**, has **not been reviewed or approved by any medical authority**, and **must not be used for diagnosis, treatment, or any medical decision-making**.
-        
-        By using this tool, you acknowledge and agree that:
-        * You understand that the application is not intended for clinical or diagnostic use.
-        * You will not interpret the output of this tool as medical advice or a substitute for professional healthcare.
-        * You assume full responsibility for any decisions or actions taken based on the output of the application.
-        * The developer of this application is not liable for any damages, losses, or harm resulting from its use.
-        """
-        
-        st.markdown(disclaimer)
+        st.text_input("Please enter the password", type="password", key="password")
         agree = st.checkbox("**I acknowledge and agree to the terms above.**")
-        
-        # Add submit button
+
         if st.button("Submit"):
             password_entered()
-            
             if not st.session_state["password_correct"]:
                 st.error("😕 Password incorrect")
             elif not agree:
@@ -133,10 +115,9 @@ def check_password():
             else:
                 st.session_state["disclaimer_agreed"] = True
                 st.rerun()
-                
         return False
+
     else:
-        # Password correct and disclaimer agreed.
         return True
 
 if check_password():
