@@ -72,7 +72,7 @@ def predict(model, record, sex, age, sampling_rate, device):
         apply_highpass=True,
         apply_lowpass=True,
         pad_to_length=4096,
-        apply_wavelet=False,
+        #apply_wavelet=False,
         device=device
     )
     

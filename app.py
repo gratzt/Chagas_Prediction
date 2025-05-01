@@ -45,82 +45,56 @@ st.markdown("""
         border-top: 1px solid #ddd;
         padding-top: 1rem;
     }
+    .landing-disclaimer {
+        background-color: #F0F2F6;
+        border-radius: 10px;
+        padding: 30px;
+        margin: 50px auto;
+        max-width: 800px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# Password protection
+# Function to check if user has acknowledged disclaimer
+def check_acknowledgement():
+    """Handles disclaimer acknowledgement logic."""
+    if "disclaimer_agreed" not in st.session_state:
+        st.session_state["disclaimer_agreed"] = False
+        
+    if not st.session_state["disclaimer_agreed"]:
+        st.markdown("<h1 class='main-header'>Using electrocardiogram data with deep neural networks to predict a neglected tropical disease: Chagas Disease</h1>", unsafe_allow_html=True)
+        
+        # Display the disclaimer on a clean landing page
+        st.markdown("""
+        <div class="landing-disclaimer">
+        <h2>Disclaimer & Acknowledgment</h2>
+        
+        <p>This application is a demonstration tool developed solely for educational and portfolio purposes. It is intended to showcase the developer's technical skills in machine learning, deep learning, and software development. <strong>It is not a medical device</strong>, has <strong>not been reviewed or approved by any medical authority</strong>, and <strong>must not be used for diagnosis, treatment, or any medical decision-making</strong>.</p>
 
-REQUIRE_PASSWORD = False
-
-REQUIRE_PASSWORD = False  # Set to True to enable password gate
-
-def check_password():
-    """Handles password gating and disclaimer logic."""
-    disclaimer = """
-    **Disclaimer & Acknowledgment**
-    
-    This application is a demonstration tool developed solely for educational and portfolio purposes. It is intended to showcase the developer's technical skills in machine learning, deep learning, and software development. **It is not a medical device**, has **not been reviewed or approved by any medical authority**, and **must not be used for diagnosis, treatment, or any medical decision-making**.
-
-    By using this tool, you acknowledge and agree that:
-    * You understand that the application is not intended for clinical or diagnostic use.
-    * You will not interpret the output of this tool as medical advice or a substitute for professional healthcare.
-    * You assume full responsibility for any decisions or actions taken based on the output of the application.
-    * The developer of this application is not liable for any damages, losses, or harm resulting from its use.
-    """
-    
-    st.markdown("<h1 class='main-header'>Using electrocardiogram data with deep neural networks to predict a neglected tropical disease: Chagas Disease</h1>", unsafe_allow_html=True)
-    st.markdown(disclaimer)
-
-    if not REQUIRE_PASSWORD:
-        agree = st.checkbox("**I acknowledge and agree to the terms above.**")
-        if agree:
-            return True
-        else:
-            st.warning("Please acknowledge the disclaimer to continue.")
-            return False
-
-    # If password required
-    def password_entered():
-        if st.session_state["password"] == "demo123":
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
-
-    if "password_correct" not in st.session_state:
-        st.text_input("Please enter the password", type="password", key="password")
-        agree = st.checkbox("**I acknowledge and agree to the terms above.**")
-
-        if st.button("Submit"):
-            password_entered()
-            if not st.session_state["password_correct"]:
-                st.error("😕 Password incorrect")
-            elif not agree:
-                st.error("Please acknowledge the disclaimer to continue")
-            else:
+        <p>By using this tool, you acknowledge and agree that:</p>
+        <ul>
+            <li>You understand that the application is not intended for clinical or diagnostic use.</li>
+            <li>You will not interpret the output of this tool as medical advice or a substitute for professional healthcare.</li>
+            <li>You assume full responsibility for any decisions or actions taken based on the output of the application.</li>
+            <li>The developer of this application is not liable for any damages, losses, or harm resulting from its use.</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Create columns to center the checkbox and button
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            agree = st.checkbox("**I acknowledge and agree to the terms above.**")
+            if agree and st.button("Submit"):
                 st.session_state["disclaimer_agreed"] = True
                 st.rerun()
         return False
-
-    elif not st.session_state.get("password_correct", False) or not st.session_state.get("disclaimer_agreed", False):
-        st.text_input("Please enter the password", type="password", key="password")
-        agree = st.checkbox("**I acknowledge and agree to the terms above.**")
-
-        if st.button("Submit"):
-            password_entered()
-            if not st.session_state["password_correct"]:
-                st.error("😕 Password incorrect")
-            elif not agree:
-                st.error("Please acknowledge the disclaimer to continue")
-            else:
-                st.session_state["disclaimer_agreed"] = True
-                st.rerun()
-        return False
-
     else:
         return True
 
-if check_password():
+# Main application
+if check_acknowledgement():
     st.markdown("<h1 class='main-header'>Using electrocardiogram data with deep neural networks to predict a neglected tropical disease: Chagas Disease</h1>", unsafe_allow_html=True)
     
     # Sidebar for inputs
@@ -193,15 +167,6 @@ if check_password():
                             with open(hea_path, "wb") as f:
                                 f.write(hea_file.getvalue())
                             
-                            # Debug info
-                            #st.write(f"Files saved to: {temp_dir}")
-                            #st.write(f"Record path: {os.path.join(temp_dir, record_name)}")
-                            
-                            # List files in directory to debug
-                            #st.write("Files in temporary directory:")
-                            #for file in os.listdir(temp_dir):
-                            #    st.write(f"- {file}")
-                            
                             # Load the record using the original record name
                             record_path = os.path.join(temp_dir, record_name)
                             
@@ -209,60 +174,40 @@ if check_password():
                                 record = wfdb.rdrecord(record_path)
                                 st.success("Record loaded successfully!")
                                 
-                                # Display record information
-                                #st.write("Record information:")
-                                #st.write(f"- Signal shape: {record.p_signal.shape}")
-                                #st.write(f"- Number of leads: {record.n_sig}")
-                                #st.write(f"- Sample frequency: {record.fs}")
-                                #st.write(f"- Number of samples: {record.sig_len}")
-                                
                                 # Convert inputs to tensors
                                 sex_tensor = torch.tensor(sex_value, dtype=torch.long)
                                 age_tensor = torch.tensor(age_value, dtype=torch.long)
                                 
                                 # Get device
                                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-                                #st.write(f"Using device: {device}")
                                 
-                                # Manual preprocessing to debug
-                                #st.write("Beginning preprocessing...")
                                 try:
                                     ecg_filter = ECGPreprocess(sampling_rate=sampling_rate)
                                     
-                                    # Step by step processing
-                                    #st.write("Starting ECG preprocessing...")
                                     data = ecg_filter.process_wfdb_files(
                                         record=record,
                                         apply_resample=True,
                                         apply_highpass=True,
                                         apply_lowpass=True,
                                         pad_to_length=4096,
-                                        apply_wavelet=False,
                                         device=device
                                     )
-                                    #st.write(f"ECG data processed, shape: {data.shape}")
                                     
                                     # Add batch dimension
                                     data = torch.unsqueeze(data, 0)
-                                    #st.write(f"After adding batch dimension, shape: {data.shape}")
                                     
                                     # Prepare other inputs
                                     sex_tensor = torch.unsqueeze(sex_tensor, 0).to(device)
                                     age_tensor = torch.unsqueeze(age_tensor, 0).to(device)
                                     
-                                    #st.write("Loading model...")
                                     # Load model
                                     model = load_model(device)
-                                    #st.write("Model loaded successfully!")
                                     
-                                    #st.write("Running inference...")
                                     # Run inference
                                     model.eval()
                                     with torch.no_grad():
                                         outputs = model(ecg=data, sex=sex_tensor, age_group=age_tensor)
                                         probabilities = torch.sigmoid(outputs).cpu().numpy()
-                                        #st.write(f"Raw model output: {outputs}")
-                                        #st.write(f"Sigmoid probabilities: {probabilities}")
                                     
                                     # Get probability value
                                     probability = float(probabilities)
