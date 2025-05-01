@@ -1,5 +1,10 @@
-torch
-wfdb
-numpy
-pywt
-scipy
+streamlit==1.32.2
+torch==2.1.0
+wfdb==4.1.2
+numpy==1.24.4
+pywt==1.4.1
+scipy==1.10.1
+Pygments==2.19.1
+markdown-it-py==3.0.0
+mdurl==0.1.2
+rich==14.0.0
